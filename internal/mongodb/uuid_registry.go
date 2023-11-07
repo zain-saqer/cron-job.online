@@ -9,7 +9,6 @@ package mongodb
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/zain-saqer/crone-job/internal/cronjob"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
@@ -17,11 +16,11 @@ import (
 )
 
 var (
-	tID         = reflect.TypeOf(cronjob.ID{})
+	tID         = reflect.TypeOf(uuid.UUID{})
 	uuidSubtype = byte(0x04)
 )
 
-func NewRegistry() *bsoncodec.Registry {
+func NewUUIDRegistry() *bsoncodec.Registry {
 	registry := bson.NewRegistry()
 	registry.RegisterTypeEncoder(tID, bsoncodec.ValueEncoderFunc(uuidEncodeValue))
 	registry.RegisterTypeDecoder(tID, bsoncodec.ValueDecoderFunc(uuidDecodeValue))
@@ -33,7 +32,7 @@ func uuidEncodeValue(_ bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val refle
 	if !val.IsValid() || val.Type() != tID {
 		return bsoncodec.ValueEncoderError{Name: "uuidEncodeValue", Types: []reflect.Type{tID}, Received: val}
 	}
-	b := val.Interface().(cronjob.ID)
+	b := val.Interface().(uuid.UUID)
 	return vw.WriteBinaryWithSubtype(b[:], uuidSubtype)
 }
 
@@ -66,6 +65,6 @@ func uuidDecodeValue(_ bsoncodec.DecodeContext, vr bsonrw.ValueReader, val refle
 	if err != nil {
 		return err
 	}
-	val.Set(reflect.ValueOf(cronjob.ID(uuid2)))
+	val.Set(reflect.ValueOf(uuid2))
 	return nil
 }

@@ -17,7 +17,7 @@ func NewClient(ctx context.Context, host, port, username, password string, timeo
 		SetServerAPIOptions(serverAPI).
 		SetTimeout(timeout).
 		SetBSONOptions(&options.BSONOptions{UseJSONStructTags: true}).
-		SetRegistry(NewRegistry())
+		SetRegistry(NewUUIDRegistry())
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, err

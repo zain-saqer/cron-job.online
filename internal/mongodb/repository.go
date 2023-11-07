@@ -5,6 +5,7 @@ import (
 	"github.com/zain-saqer/crone-job/internal/cronjob"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -12,6 +13,19 @@ type MongoCronJobRepository struct {
 	client     *mongo.Client
 	database   string
 	collection string
+}
+
+func PrepareDatabase(ctx context.Context, client *mongo.Client, database, collection string) error {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{"id", 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	_, err := client.Database(database).Collection(collection).Indexes().CreateOne(ctx, indexModel)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *MongoCronJobRepository) FindAllCronJobsBetween(ctx context.Context, start, end time.Time) ([]cronjob.CronJob, error) {
