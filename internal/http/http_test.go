@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -19,7 +20,7 @@ func TestClient_Request(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}))
 	defer testServer.Close()
 
@@ -29,7 +30,7 @@ func TestClient_Request(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx := context.Background()
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
@@ -39,14 +40,10 @@ func TestClient_Request(t *testing.T) {
 				t.Error(`expect request to timeout, request didn't timeout`)
 			}
 			var e net.Error
-			if !(errors.As(err, &e) && e.Timeout()) {
+			if !(errors.As(err, &e) && err.(*url.Error).Timeout()) {
 				t.Error(`unexpected error:`, err)
 			}
 		}()
-		select {
-		case <-time.After(1000 * time.Millisecond):
-			cancel()
-		}
 		wg.Wait()
 	})
 

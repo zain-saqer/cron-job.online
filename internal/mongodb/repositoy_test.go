@@ -36,8 +36,8 @@ func TestMongoCronJobRepository(t *testing.T) {
 	var repository cronjob.Repository = NewMongoCronJobRepository(client, testDatabaseName, testCronJobCollection)
 	t1 := time.Date(2023, time.November, 10, 0, 0, 0, 0, time.Local)
 	t2 := time.Date(2023, time.November, 10, 0, 1, 0, 0, time.Local)
-	job1 := &cronjob.CronJob{ID: uuid.New(), NextRun: t1, CroneExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	job2 := &cronjob.CronJob{ID: uuid.New(), NextRun: t2, CroneExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	job1 := &cronjob.CronJob{ID: uuid.New(), NextRun: t1, CronExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	job2 := &cronjob.CronJob{ID: uuid.New(), NextRun: t2, CronExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	t.Run(`InsertCronJob and FindAllCronJobsBetween works`, func(t *testing.T) {
 		ctx := context.TODO()
 		_, err := repository.InsertCronJob(ctx, job1)
