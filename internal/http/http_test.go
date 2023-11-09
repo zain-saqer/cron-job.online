@@ -30,12 +30,11 @@ func TestClient_Request(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ctx := context.Background()
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err = client.Request(ctx, req)
+			_, err = client.Request(req)
 			if err == nil {
 				t.Error(`expect request to timeout, request didn't timeout`)
 			}
@@ -49,16 +48,16 @@ func TestClient_Request(t *testing.T) {
 
 	t.Run(`client will cancel`, func(t *testing.T) {
 		client := NewClient(5 * time.Millisecond)
-		req, err := http.NewRequest(`GET`, testServer.URL, strings.NewReader(``))
+		ctx, cancel := context.WithCancel(context.Background())
+		req, err := http.NewRequestWithContext(ctx, `GET`, testServer.URL, strings.NewReader(``))
 		if err != nil {
 			t.Error(err)
 		}
-		ctx, cancel := context.WithCancel(context.Background())
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err = client.Request(ctx, req)
+			_, err = client.Request(req)
 			if err == nil {
 				t.Error(`expect request to timeout, request didn't timeout`)
 			}
