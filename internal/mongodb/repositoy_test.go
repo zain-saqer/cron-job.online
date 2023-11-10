@@ -27,7 +27,7 @@ func setup(t *testing.T, client *mongo.Client) {
 	}
 }
 
-func TestMongoCronJobRepository(t *testing.T) {
+func TestCronJobRepository(t *testing.T) {
 	client, err := NewClient(context.TODO(), host, port, username, password, 3*time.Second)
 	if err != nil {
 		t.Error(err)
@@ -49,6 +49,28 @@ func TestMongoCronJobRepository(t *testing.T) {
 			t.Error(err)
 		}
 		jobs, err := repository.FindAllCronJobsBetween(ctx, t1, t2)
+		if len(jobs) != 1 {
+			t.Errorf(`unexpected len(jobs): wanted %d, got %d`, 1, len(jobs))
+		}
+		if job1.ID.String() != jobs[0].ID.String() {
+			t.Errorf(`FindAllCronJobsBetween failed: unexpected job returned`)
+		}
+	})
+	t.Run(`InsertCronJob and FindCronJobsBetween works`, func(t *testing.T) {
+		ctx := context.TODO()
+		_, err := repository.InsertCronJob(ctx, job1)
+		if err != nil {
+			t.Error(err)
+		}
+		_, err = repository.InsertCronJob(ctx, job2)
+		if err != nil {
+			t.Error(err)
+		}
+		jobStream, err := repository.FindCronJobsBetween(ctx, t1, t2)
+		jobs := make([]cronjob.CronJob, 2)
+		for job := range jobStream {
+			jobs = append(jobs, job)
+		}
 		if len(jobs) != 1 {
 			t.Errorf(`unexpected len(jobs): wanted %d, got %d`, 1, len(jobs))
 		}

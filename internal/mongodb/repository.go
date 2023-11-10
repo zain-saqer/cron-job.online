@@ -28,6 +28,33 @@ func PrepareDatabase(ctx context.Context, client *mongo.Client, database, collec
 	return nil
 }
 
+func (r *MongoCronJobRepository) FindCronJobsBetween(ctx context.Context, start, end time.Time) (<-chan cronjob.CronJob, error) {
+	filter := bson.D{
+		{`next_run`, bson.D{{`$gte`, start}}},
+		{`next_run`, bson.D{{`$lt`, end}}},
+	}
+	cursor, err := r.client.Database(r.database).Collection(r.collection).Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	var results chan cronjob.CronJob
+	defer close(results)
+	for cursor.Next(ctx) {
+		var cronJob cronjob.CronJob
+		err := cursor.Decode(&cronJob)
+		if err != nil {
+			return nil, err
+		}
+		select {
+		case results <- cronJob:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+
+	return results, err
+}
+
 func (r *MongoCronJobRepository) FindAllCronJobsBetween(ctx context.Context, start, end time.Time) ([]cronjob.CronJob, error) {
 	filter := bson.D{
 		{`next_run`, bson.D{{`$gte`, start}}},
