@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zain-saqer/crone-job/internal/cronjob"
 	"go.mongodb.org/mongo-driver/mongo"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -32,19 +33,19 @@ func TestCronJobRepository(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	setup(t, client)
-	var repository cronjob.Repository = NewMongoCronJobRepository(client, testDatabaseName, testCronJobCollection)
+	var repository = NewMongoCronJobRepository(client, testDatabaseName, testCronJobCollection)
 	t1 := time.Date(2023, time.November, 10, 0, 0, 0, 0, time.Local)
 	t2 := time.Date(2023, time.November, 10, 0, 1, 0, 0, time.Local)
 	job1 := &cronjob.CronJob{ID: uuid.New(), NextRun: t1, CronExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	job2 := &cronjob.CronJob{ID: uuid.New(), NextRun: t2, CronExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	t.Run(`InsertCronJob and FindAllCronJobsBetween works`, func(t *testing.T) {
 		ctx := context.TODO()
-		_, err := repository.InsertCronJob(ctx, job1)
+		setup(t, client)
+		err := repository.InsertCronJob(ctx, job1)
 		if err != nil {
 			t.Error(err)
 		}
-		_, err = repository.InsertCronJob(ctx, job2)
+		err = repository.InsertCronJob(ctx, job2)
 		if err != nil {
 			t.Error(err)
 		}
@@ -58,16 +59,17 @@ func TestCronJobRepository(t *testing.T) {
 	})
 	t.Run(`InsertCronJob and FindCronJobsBetween works`, func(t *testing.T) {
 		ctx := context.TODO()
-		_, err := repository.InsertCronJob(ctx, job1)
+		setup(t, client)
+		err := repository.InsertCronJob(ctx, job1)
 		if err != nil {
 			t.Error(err)
 		}
-		_, err = repository.InsertCronJob(ctx, job2)
+		err = repository.InsertCronJob(ctx, job2)
 		if err != nil {
 			t.Error(err)
 		}
 		jobStream, err := repository.FindCronJobsBetween(ctx, t1, t2)
-		jobs := make([]cronjob.CronJob, 2)
+		jobs := make([]cronjob.CronJob, 0)
 		for job := range jobStream {
 			jobs = append(jobs, job)
 		}
@@ -76,6 +78,40 @@ func TestCronJobRepository(t *testing.T) {
 		}
 		if job1.ID.String() != jobs[0].ID.String() {
 			t.Errorf(`FindAllCronJobsBetween failed: unexpected job returned`)
+		}
+	})
+	t.Run(`UpdateOrInsert insert and update a record`, func(t *testing.T) {
+		ctx := context.TODO()
+		setup(t, client)
+		job := &cronjob.CronJob{ID: uuid.New(), NextRun: t1, CronExpr: `5 4 * * *`, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+		err := repository.UpdateOrInsert(ctx, job)
+		if err != nil {
+			t.Error(err)
+		}
+		jobs, err := repository.FindAllCronJobsBetween(ctx, t1, t1.Add(time.Minute))
+		if err != nil {
+			t.Error(err)
+		}
+		if len(jobs) != 1 {
+			t.Errorf(`unexpected len(jobs): wanted %d, got %d`, 1, len(jobs))
+		}
+		if reflect.DeepEqual(job, jobs[0]) {
+			t.Errorf(`UpdateOrInsert failed: unexpected job returned`)
+		}
+		job.CronExpr = "cron expression"
+		err = repository.UpdateOrInsert(ctx, job)
+		if err != nil {
+			t.Error(err)
+		}
+		jobs, err = repository.FindAllCronJobsBetween(ctx, t1, t1.Add(time.Minute))
+		if err != nil {
+			t.Error(err)
+		}
+		if len(jobs) != 1 {
+			t.Errorf(`unexpected len(jobs): wanted %d, got %d`, 1, len(jobs))
+		}
+		if reflect.DeepEqual(job, jobs[0]) {
+			t.Errorf(`UpdateOrInsert failed: cron-job not updated`)
 		}
 	})
 }

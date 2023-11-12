@@ -2,6 +2,8 @@ package mongodb
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/zain-saqer/crone-job/internal/cronjob"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,20 +39,23 @@ func (r *MongoCronJobRepository) FindCronJobsBetween(ctx context.Context, start,
 	if err != nil {
 		return nil, err
 	}
-	var results chan cronjob.CronJob
-	defer close(results)
-	for cursor.Next(ctx) {
-		var cronJob cronjob.CronJob
-		err := cursor.Decode(&cronJob)
-		if err != nil {
-			return nil, err
+	results := make(chan cronjob.CronJob)
+	go func() {
+		defer close(results)
+		for cursor.Next(ctx) {
+			var cronJob cronjob.CronJob
+			err := cursor.Decode(&cronJob)
+			if err != nil {
+				return
+			}
+			select {
+			case results <- cronJob:
+				fmt.Println(`case results <- cronJob:`)
+			case <-ctx.Done():
+				return
+			}
 		}
-		select {
-		case results <- cronJob:
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-	}
+	}()
 
 	return results, err
 }
@@ -64,18 +69,33 @@ func (r *MongoCronJobRepository) FindAllCronJobsBetween(ctx context.Context, sta
 	if err != nil {
 		return nil, err
 	}
-	var result []cronjob.CronJob
+	result := make([]cronjob.CronJob, 0)
 	err = cursor.All(ctx, &result)
 
 	return result, err
 }
 
-func (r *MongoCronJobRepository) InsertCronJob(ctx context.Context, job *cronjob.CronJob) (interface{}, error) {
-	result, err := r.client.Database(r.database).Collection(r.collection).InsertOne(ctx, job)
+func (r *MongoCronJobRepository) InsertCronJob(ctx context.Context, job *cronjob.CronJob) error {
+	_, err := r.client.Database(r.database).Collection(r.collection).InsertOne(ctx, job)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return result.InsertedID, nil
+	return nil
+}
+
+func (r *MongoCronJobRepository) UpdateOrInsert(ctx context.Context, job *cronjob.CronJob) error {
+	filter := bson.D{
+		{`id`, job.ID},
+	}
+	result := r.client.Database(r.database).Collection(r.collection).FindOneAndReplace(ctx, filter, job)
+	err := result.Err()
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		return err
+	}
+	return r.InsertCronJob(ctx, job)
 }
 
 func NewMongoCronJobRepository(client *mongo.Client, database, collection string) *MongoCronJobRepository {

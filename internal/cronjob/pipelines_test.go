@@ -106,8 +106,11 @@ func (r *MockRepo) FindCronJobsBetween(context.Context, time.Time, time.Time) (<
 func (r *MockRepo) FindAllCronJobsBetween(context.Context, time.Time, time.Time) ([]CronJob, error) {
 	return nil, nil
 }
-func (r *MockRepo) InsertCronJob(context.Context, *CronJob) (interface{}, error) {
-	return nil, nil
+func (r *MockRepo) InsertCronJob(context.Context, *CronJob) error {
+	return nil
+}
+func (r *MockRepo) UpdateOrInsert(context.Context, *CronJob) error {
+	return nil
 }
 
 func TestScheduleRunner(t *testing.T) {
