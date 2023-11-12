@@ -8,6 +8,8 @@ services:
       - type: bind
         source: ./
         target: /app
+    networks:
+      - my_net
     environment:
       MONGO_HOST: mongo
       MONGO_PORT: 27017
@@ -19,6 +21,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - my_net
     volumes:
       - /data/mongodb
   mongo-express:
