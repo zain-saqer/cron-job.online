@@ -15,11 +15,11 @@ type Client interface {
 	Request(ctx context.Context, method, url string, body io.Reader) (*Result, error)
 }
 
-type SimpleClient struct {
+type C struct {
 	client *http.Client
 }
 
-func (c SimpleClient) Request(ctx context.Context, method, url string, body io.Reader) (*Result, error) {
+func (c C) Request(ctx context.Context, method, url string, body io.Reader) (*Result, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, err
@@ -35,6 +35,6 @@ func (c SimpleClient) Request(ctx context.Context, method, url string, body io.R
 	return &Result{Body: string(resBody)}, nil
 }
 
-func NewClient(timeout time.Duration) *SimpleClient {
-	return &SimpleClient{&http.Client{Timeout: timeout}}
+func NewClient(timeout time.Duration) Client {
+	return C{&http.Client{Timeout: timeout}}
 }

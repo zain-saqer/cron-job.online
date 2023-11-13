@@ -87,6 +87,7 @@ func (r *MongoCronJobRepository) UpdateOrInsert(ctx context.Context, job *cronjo
 	filter := bson.D{
 		{`id`, job.ID},
 	}
+	job.UpdatedAt = time.Now()
 	result := r.client.Database(r.database).Collection(r.collection).FindOneAndReplace(ctx, filter, job)
 	err := result.Err()
 	if err == nil {

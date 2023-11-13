@@ -3,6 +3,7 @@ package cronjob
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	cronhttp "github.com/zain-saqer/crone-job/internal/http"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 )
 
 func Test_requestWorker(t *testing.T) {
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	t.Run(`worker sends requests`, func(t *testing.T) {
 		var callCount atomic.Int64
 		testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +27,7 @@ func Test_requestWorker(t *testing.T) {
 		var jobNum int64 = 100
 		go func() {
 			for i := int64(0); i < jobNum; i++ {
-				jobStream <- JobRequest{url: testServer.URL}
+				jobStream <- JobRequest{cronJob: &CronJob{URL: testServer.URL}}
 			}
 			close(jobStream)
 		}()
@@ -48,6 +50,7 @@ func Test_requestWorker(t *testing.T) {
 }
 
 func Test_startWorkers(t *testing.T) {
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	t.Run(`workers send requests`, func(t *testing.T) {
 		var callCount atomic.Int64
 		testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +64,7 @@ func Test_startWorkers(t *testing.T) {
 		var jobNum int64 = 100
 		go func() {
 			for i := int64(0); i < jobNum; i++ {
-				jobStream <- JobRequest{url: testServer.URL}
+				jobStream <- JobRequest{cronJob: &CronJob{URL: testServer.URL}}
 			}
 			close(jobStream)
 		}()
@@ -114,6 +117,7 @@ func (r *MockRepo) UpdateOrInsert(context.Context, *CronJob) error {
 }
 
 func TestScheduleRunner(t *testing.T) {
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	var callCount atomic.Int64
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount.Add(1)
@@ -125,16 +129,16 @@ func TestScheduleRunner(t *testing.T) {
 		cronJobs = append(cronJobs, job)
 	}
 
-	t.Run(`ScheduleRunner sends requests`, func(t *testing.T) {
+	t.Run(`loop sends requests`, func(t *testing.T) {
 		timeout := 200 * time.Millisecond
 		ctx, cancel := context.WithCancel(context.Background())
 		time.AfterFunc(timeout, func() {
 			cancel()
 		})
 		client := cronhttp.NewClient(timeout)
-		var cronJobLimit int64 = 1000
+		var cronJobLimit int64 = 500
 		repo := &MockRepo{results: cronJobs, jobCountLimit: cronJobLimit}
-		results := ScheduleRunner(ctx, client, 3, 100, repo)
+		results := loop(ctx, client, 3, 100, repo)
 	LOOP:
 		for {
 			select {

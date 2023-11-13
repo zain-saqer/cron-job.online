@@ -2,6 +2,8 @@ package cronjob
 
 import (
 	"context"
+	"github.com/gorhill/cronexpr"
+	"github.com/rs/zerolog/log"
 	cronhttp "github.com/zain-saqer/crone-job/internal/http"
 	"strings"
 	"sync"
@@ -9,13 +11,14 @@ import (
 )
 
 type JobRequest struct {
-	url  string
-	time time.Time
+	cronJob *CronJob
 }
 
 type JobResult struct {
-	error error
-	body  string
+	error  error
+	job    *CronJob
+	body   string
+	doneAt time.Time
 }
 
 func fanIn(ctx context.Context, channels ...<-chan JobResult) <-chan JobResult {
@@ -44,19 +47,24 @@ func fanIn(ctx context.Context, channels ...<-chan JobResult) <-chan JobResult {
 	return multiplexedStream
 }
 
-func worker(ctx context.Context, jobStream <-chan JobRequest, client *cronhttp.SimpleClient) <-chan JobResult {
+func worker(ctx context.Context, jobStream <-chan JobRequest, client cronhttp.Client) <-chan JobResult {
 	results := make(chan JobResult)
 	go func() {
 		defer close(results)
 		for {
 			select {
-			case job := <-jobStream:
-				result, err := client.Request(ctx, `GET`, job.url, strings.NewReader(""))
+			case job, ok := <-jobStream:
+				if !ok {
+					return
+				}
+				log.Printf(`worker: %+v`, job.cronJob)
+				result, err := client.Request(ctx, `GET`, job.cronJob.URL, strings.NewReader(""))
 				if err != nil {
+					log.Printf(`worker error: %s`, err.Error())
 					results <- JobResult{error: err}
 					return
 				}
-				results <- JobResult{body: result.Body}
+				results <- JobResult{body: result.Body, job: job.cronJob}
 			case <-ctx.Done():
 				results <- JobResult{error: ctx.Err()}
 				return
@@ -66,7 +74,7 @@ func worker(ctx context.Context, jobStream <-chan JobRequest, client *cronhttp.S
 	return results
 }
 
-func workers(ctx context.Context, jobStream <-chan JobRequest, numberOfWorkers int, client *cronhttp.SimpleClient) <-chan JobResult {
+func workers(ctx context.Context, jobStream <-chan JobRequest, numberOfWorkers int, client cronhttp.Client) <-chan JobResult {
 	workers := make([]<-chan JobResult, numberOfWorkers)
 	for i := 0; i < numberOfWorkers; i++ {
 		workers[i] = worker(ctx, jobStream, client)
@@ -74,7 +82,7 @@ func workers(ctx context.Context, jobStream <-chan JobRequest, numberOfWorkers i
 	return fanIn(ctx, workers...)
 }
 
-func ScheduleRunner(ctx context.Context, Client *cronhttp.SimpleClient, numberOfWorkers int, interval time.Duration, cronJobRepository Repository) <-chan JobResult {
+func loop(ctx context.Context, Client cronhttp.Client, numberOfWorkers int, interval time.Duration, cronJobRepository Repository) <-chan JobResult {
 	jobStream := make(chan JobRequest)
 	workersResults := workers(ctx, jobStream, numberOfWorkers, Client)
 	result := make(chan JobResult)
@@ -83,7 +91,6 @@ func ScheduleRunner(ctx context.Context, Client *cronhttp.SimpleClient, numberOf
 		for {
 			select {
 			case <-ctx.Done():
-				result <- JobResult{error: ctx.Err()}
 				return
 			case workerResult, ok := <-workersResults:
 				if !ok {
@@ -91,9 +98,8 @@ func ScheduleRunner(ctx context.Context, Client *cronhttp.SimpleClient, numberOf
 				}
 				select {
 				case <-ctx.Done():
-					result <- JobResult{error: ctx.Err()}
 					return
-				case result <- JobResult{body: workerResult.body}:
+				case result <- JobResult{body: workerResult.body, job: workerResult.job}:
 				}
 			}
 		}
@@ -115,14 +121,14 @@ func ScheduleRunner(ctx context.Context, Client *cronhttp.SimpleClient, numberOf
 				select {
 				case <-ctx.Done():
 					return
-				case cronJobStream, ok := <-cronJobStream:
+				case cronJob, ok := <-cronJobStream:
 					if !ok {
 						break scheduleLoop
 					}
 					select {
 					case <-ctx.Done():
 						return
-					case jobStream <- JobRequest{cronJobStream.URL, cronJobStream.NextRun}:
+					case jobStream <- JobRequest{cronJob: &cronJob}:
 					}
 				}
 			}
@@ -130,4 +136,42 @@ func ScheduleRunner(ctx context.Context, Client *cronhttp.SimpleClient, numberOf
 	}()
 
 	return result
+}
+
+func processResults(ctx context.Context, resultStream <-chan JobResult, cronJobRepository Repository) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case result := <-resultStream:
+			if result.error != nil {
+				log.Printf(`result processing error: %s`, result.error.Error())
+				continue
+			}
+			cronExpr, err := cronexpr.Parse(result.job.CronExpr)
+			if err != nil {
+				log.Printf(`result processing error: %s`, err.Error())
+				continue
+			}
+			result.job.NextRun = cronExpr.Next(result.job.NextRun)
+			err = cronJobRepository.UpdateOrInsert(ctx, result.job)
+			if err != nil {
+				log.Printf(`result processing error: %s`, err.Error())
+				continue
+			}
+			log.Printf(`result processing: job done and updated %+v`, result.job)
+		}
+	}
+}
+
+type JobService struct {
+	Client            cronhttp.Client
+	CronJobRepository Repository
+	NumberOfWorkers   int
+	Interval          time.Duration
+}
+
+func (s *JobService) StartPipeline(ctx context.Context) {
+	resultStream := loop(ctx, s.Client, s.NumberOfWorkers, s.Interval, s.CronJobRepository)
+	processResults(ctx, resultStream, s.CronJobRepository)
 }
