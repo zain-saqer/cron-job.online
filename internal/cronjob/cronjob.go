@@ -25,20 +25,21 @@ type Repository interface {
 }
 
 type UUIDGenerator interface {
-	New() (uuid.UUID, error)
+	NewRandom() (uuid.UUID, error)
 }
 
-func New(cronExpr string, now time.Time, uuidGenerator UUIDGenerator) (*CronJob, error) {
+func New(cronExpr string, url string, now time.Time, uuidGenerator UUIDGenerator) (*CronJob, error) {
 	expression, err := cronexpr.Parse(cronExpr)
 	if err != nil {
 		return &CronJob{}, stacktrace.Propagate(err, `invalid cron expression: %s`, cronExpr)
 	}
-	id, err := uuidGenerator.New()
+	id, err := uuidGenerator.NewRandom()
 	if err != nil {
 		return &CronJob{}, stacktrace.Propagate(err, `error while generating uuid`)
 	}
 	return &CronJob{
 		ID:        id,
+		URL:       url,
 		NextRun:   expression.Next(now),
 		CronExpr:  cronExpr,
 		CreatedAt: now,

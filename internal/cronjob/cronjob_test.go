@@ -11,12 +11,12 @@ type mockUUIDGenerator struct {
 	id uuid.UUID
 }
 
-func (g mockUUIDGenerator) New() (uuid.UUID, error) {
+func (g mockUUIDGenerator) NewRandom() (uuid.UUID, error) {
 	return g.id, nil
 }
 
 func TestCronJob_New(t *testing.T) {
-	t.Run(`New returns expected CronJob`, func(t *testing.T) {
+	t.Run(`NewRandom returns expected CronJob`, func(t *testing.T) {
 		now := time.Date(2023, 11, 7, 22, 20, 0, 0, time.Local)
 		fiveMinLater := now.Add(5 * time.Minute)
 		expectedId := uuid.New()
@@ -28,7 +28,7 @@ func TestCronJob_New(t *testing.T) {
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
-		resultCronJob, err := New(cronExpression, now, &mockUUIDGenerator{expectedId})
+		resultCronJob, err := New(cronExpression, ``, now, &mockUUIDGenerator{expectedId})
 		if err != nil {
 			t.Error(err)
 		}
@@ -36,9 +36,9 @@ func TestCronJob_New(t *testing.T) {
 			t.Errorf(`unexpected CronJob`)
 		}
 	})
-	t.Run(`New returns error when cron-expression is invalid`, func(t *testing.T) {
+	t.Run(`NewRandom returns error when cron-expression is invalid`, func(t *testing.T) {
 		now := time.Date(2023, 11, 7, 22, 20, 0, 0, time.Local)
-		_, err := New(``, now, &mockUUIDGenerator{uuid.New()})
+		_, err := New(``, ``, now, &mockUUIDGenerator{uuid.New()})
 		if err == nil {
 			t.Errorf(`error was expected`)
 		}

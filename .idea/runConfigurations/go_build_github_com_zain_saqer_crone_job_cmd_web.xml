@@ -1,0 +1,22 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build github.com/zain-saqer/crone-job/cmd/web" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="crone-job" />
+    <target name="@@@LOCAL@@@" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="AUTH_PASS" value="pass" />
+      <env name="AUTH_USER" value="admin" />
+      <env name="MONGO_COLLECTION" value="cronjob" />
+      <env name="MONGO_DATABASE" value="test" />
+      <env name="MONGO_HOST" value="localhost" />
+      <env name="MONGO_PASSWORD" value="example" />
+      <env name="MONGO_PORT" value="27017" />
+      <env name="MONGO_USERNAME" value="root" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/zain-saqer/crone-job/cmd/web" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/web/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

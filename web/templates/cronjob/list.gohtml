@@ -1,0 +1,41 @@
+{{define `body`}}
+    <div class="container my-5">
+        <div class="col-lg-8 px-0">
+            {{template `cronjob_list` .}}
+        </div>
+    </div>
+{{end}}
+{{define `cronjob_list`}}
+    <h3>Cron jobs</h3>
+    <div class="card">
+        <div class="card-body">
+            <a class="btn btn-secondary" href="/cronjob/add">ADD</a>
+        </div>
+    </div>
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Cron expression</th>
+            <th scope="col">Next run</th>
+            <th scope="col">URL</th>
+            <th scope="col">Created at</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .CronjobList}}
+        <tr>
+            <th scope="row">{{.ID}}</th>
+            <td>{{.CronExpr}}</td>
+            <td>{{.NextRun.Format "2006.01.02 15:04"}}</td>
+            <td>{{slice .URL 0 19}}</td>
+            <td>{{.CreatedAt.Format "2006.01.02 15:04"}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+    {{if not .CronjobList}}
+        <span class="text-muted text-center d-block">No cron jobs</span>
+    {{end}}
+{{end}}
+

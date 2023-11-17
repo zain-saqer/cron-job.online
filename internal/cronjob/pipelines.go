@@ -106,29 +106,35 @@ func loop(ctx context.Context, Client cronhttp.Client, numberOfWorkers int, inte
 	}()
 	go func() {
 		defer close(jobStream)
-		for range time.Tick(interval) {
-			now := time.Now()
-			cronJobStream, err := cronJobRepository.FindCronJobsBetween(ctx, time.Unix(0, 0), now.Add(interval))
-			if err != nil {
-				select {
-				case <-ctx.Done():
-				case result <- JobResult{error: err}:
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
-		scheduleLoop:
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case cronJob, ok := <-cronJobStream:
-					if !ok {
-						break scheduleLoop
-					}
+			case <-time.Tick(interval):
+				now := time.Now()
+				cronJobStream, err := cronJobRepository.FindCronJobsBetween(ctx, time.Unix(0, 0), now.Add(interval))
+				if err != nil {
 					select {
 					case <-ctx.Done():
 						return
-					case jobStream <- JobRequest{cronJob: &cronJob}:
+					case result <- JobResult{error: err}:
+						continue
+					}
+				}
+			scheduleLoop:
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case cronJob, ok := <-cronJobStream:
+						if !ok {
+							break scheduleLoop
+						}
+						select {
+						case <-ctx.Done():
+							return
+						case jobStream <- JobRequest{cronJob: &cronJob}:
+						}
 					}
 				}
 			}
@@ -143,23 +149,26 @@ func processResults(ctx context.Context, resultStream <-chan JobResult, cronJobR
 		select {
 		case <-ctx.Done():
 			return
-		case result := <-resultStream:
+		case result, open := <-resultStream:
+			if !open {
+				return
+			}
 			if result.error != nil {
-				log.Printf(`result processing error: %s`, result.error.Error())
+				log.Err(result.error).Msg(`result processing error`)
 				continue
 			}
 			cronExpr, err := cronexpr.Parse(result.job.CronExpr)
 			if err != nil {
-				log.Printf(`result processing error: %s`, err.Error())
+				log.Err(err).Str(`cron expression`, result.job.CronExpr).Msg(`result processing error`)
 				continue
 			}
 			result.job.NextRun = cronExpr.Next(result.job.NextRun)
 			err = cronJobRepository.UpdateOrInsert(ctx, result.job)
 			if err != nil {
-				log.Printf(`result processing error: %s`, err.Error())
+				log.Err(err).Msg(`result processing error`)
 				continue
 			}
-			log.Printf(`result processing: job done and updated %+v`, result.job)
+			log.Info().Interface(`job`, result.job).Msg(`result processing: job done and updated`)
 		}
 	}
 }

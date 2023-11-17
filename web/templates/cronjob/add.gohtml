@@ -1,0 +1,32 @@
+{{define `body`}}
+    <div class="container my-5">
+        <div class="col-lg-8 px-0">
+            {{template `cronjob_add` .}}
+        </div>
+    </div>
+{{end}}
+{{define `cronjob_add`}}
+    {{- /*gotype: main.CronjobAdd*/ -}}
+    <h3>Add a cron job</h3>
+    {{if .Errors}}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <ul class="mb-0">
+                {{range .Errors}}
+                    <li>{{.Message}}</li>
+                {{end}}
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {{end}}
+    <form method="post">
+        <div class="mb-3">
+            <label for="cronExprInput" class="form-label">Cron expression</label>
+            <input type="text" name="cronExpr" class="form-control" id="cronExprInput" value="{{.CronExpr}}" required>
+        </div>
+        <div class="mb-3">
+            <label for="urlInput" class="form-label">URL</label>
+            <input type="url" name="url" class="form-control" id="urlInput" value="{{.URL}}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">ADD</button>
+    </form>
+{{end}}
