@@ -18,34 +18,37 @@ import (
 	"time"
 )
 
-var (
-	address         = os.Getenv(`ADDRESS`)
-	autoTLSAddress  = os.Getenv(`AUTO_TLS`)
-	tlsAddress      = os.Getenv(`TLS_ADDRESS`)
-	mongoHost       = os.Getenv(`MONGO_HOST`)
-	mongoUsername   = os.Getenv(`MONGO_USERNAME`)
-	mongoPassword   = os.Getenv(`MONGO_PASSWORD`)
-	mongoPort       = os.Getenv(`MONGO_PORT`)
-	mongoDatabase   = os.Getenv(`MONGO_DATABASE`)
-	mongoCollection = os.Getenv(`MONGO_COLLECTION`)
-
-	authUser = os.Getenv(`AUTH_USER`)
-	authPass = os.Getenv(`AUTH_PASS`)
-)
+func getConfigs() *Config {
+	_, tlsEnabled := os.LookupEnv(`ENABLE_TLS`)
+	return &Config{
+		Address:         os.Getenv(`ADDRESS`),
+		TLSEnabled:      tlsEnabled,
+		TLSAddress:      os.Getenv(`TLS_ADDRESS`),
+		MongoHost:       os.Getenv(`MONGO_HOST`),
+		MongoUsername:   os.Getenv(`MONGO_USERNAME`),
+		MongoPassword:   os.Getenv(`MONGO_PASSWORD`),
+		MongoPort:       os.Getenv(`MONGO_PORT`),
+		MongoDatabase:   os.Getenv(`MONGO_DATABASE`),
+		MongoCollection: os.Getenv(`MONGO_COLLECTION`),
+		AuthUser:        os.Getenv(`AUTH_USER`),
+		AuthPass:        os.Getenv(`AUTH_PASS`),
+	}
+}
 
 func main() {
+	config := getConfigs()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	client, err := mongodb.NewClient(ctx, mongoHost, mongoPort, mongoUsername, mongoPassword, 3*time.Second)
+	client, err := mongodb.NewClient(ctx, config.MongoHost, config.MongoPort, config.MongoUsername, config.MongoPassword, 3*time.Second)
 	if err != nil {
 		log.Fatal().Err(err).Stack().Msg(`error creating mongodb client`)
 	}
-	cronJobRepository := mongodb.NewMongoCronJobRepository(client, mongoDatabase, mongoCollection)
+	cronJobRepository := mongodb.NewMongoCronJobRepository(client, config.MongoDatabase, config.MongoCollection)
 	app := App{CronJobRepository: cronJobRepository, UUIDGenerator: UUIDGenerator{}}
 	e := echo.New()
 	e.Debug = true
-	middlewares(e, authUser, authPass)
+	middlewares(e, config)
 	err = app.Routes(e)
 	if err != nil {
 		log.Fatal().Err(err).Msg(`error creating routes`)
@@ -65,11 +68,11 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if autoTLSAddress != `` {
+		if config.TLSEnabled {
 			// e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("<DOMAIN>")
 			// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
 			e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
-			err := e.StartAutoTLS(tlsAddress)
+			err := e.StartAutoTLS(config.TLSAddress)
 			if err != nil && !errors.Is(http.ErrServerClosed, err) {
 				log.Fatal().Err(err).Msg(`shutting down tls server error`)
 			}
@@ -78,7 +81,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := e.Start(address)
+		err := e.Start(config.Address)
 		if err != nil && !errors.Is(http.ErrServerClosed, err) {
 			log.Fatal().Err(err).Msg(`shutting down server error`)
 		}

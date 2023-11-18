@@ -34,10 +34,12 @@ func basicAuth(e *echo.Echo, user, pass string) {
 	}))
 }
 
-func middlewares(e *echo.Echo, user, pass string) {
-	e.Pre(middleware.HTTPSRedirect())
+func middlewares(e *echo.Echo, config *Config) {
+	if config.TLSEnabled {
+		e.Pre(middleware.HTTPSRedirect())
+	}
 	e.Use(middleware.Recover())
-	basicAuth(e, user, pass)
+	basicAuth(e, config.AuthUser, config.AuthPass)
 	e.Use(middleware.Gzip())
 	requestLogger(e)
 }

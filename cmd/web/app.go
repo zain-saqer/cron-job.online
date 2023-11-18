@@ -16,3 +16,17 @@ type UUIDGenerator struct {
 func (g UUIDGenerator) NewRandom() (uuid.UUID, error) {
 	return uuid.NewRandom()
 }
+
+type Config struct {
+	Address         string
+	TLSEnabled      bool
+	TLSAddress      string
+	MongoHost       string
+	MongoUsername   string
+	MongoPassword   string
+	MongoPort       string
+	MongoDatabase   string
+	MongoCollection string
+	AuthUser        string
+	AuthPass        string
+}
