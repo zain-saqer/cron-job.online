@@ -68,11 +68,17 @@ func main() {
 			// e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("<DOMAIN>")
 			// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
 			e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+			err := e.StartAutoTLS(address)
+			if err != nil && !errors.Is(http.ErrServerClosed, err) {
+				log.Fatal().Err(err).Msg(`shutting down server`)
+			}
+		} else {
+			err := e.Start(address)
+			if err != nil && !errors.Is(http.ErrServerClosed, err) {
+				log.Fatal().Err(err).Msg(`shutting down server`)
+			}
 		}
-		err = e.Start(address)
-		if err != nil && !errors.Is(http.ErrServerClosed, err) {
-			log.Fatal().Err(err).Msg(`shutting down server`)
-		}
+
 	}()
 	wg.Add(1)
 	go func() {

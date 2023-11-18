@@ -35,6 +35,7 @@ func basicAuth(e *echo.Echo, user, pass string) {
 }
 
 func middlewares(e *echo.Echo, user, pass string) {
+	e.Pre(middleware.HTTPSRedirect())
 	e.Use(middleware.Recover())
 	basicAuth(e, user, pass)
 	e.Use(middleware.Gzip())
