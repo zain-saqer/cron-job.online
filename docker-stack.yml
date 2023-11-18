@@ -11,7 +11,7 @@ services:
       - /var/www/.cache
     environment:
       ADDRESS: ${ADDRESS:?}
-      AUTO_TLS: ${AUTO_TLS}
+      ENABLE_TLS: ${ENABLE_TLS}
       TLS_ADDRESS: ${TLS_ADDRESS:?}
       AUTH_USER: ${AUTH_USER:?}
       AUTH_PASS: ${AUTH_PASS:?}
