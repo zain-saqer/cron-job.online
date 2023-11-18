@@ -8,7 +8,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/www/.cache
+      - autocert_cache:/var/www/.cache
     environment:
       ADDRESS: ${ADDRESS:?}
       ENABLE_TLS: ${ENABLE_TLS}
