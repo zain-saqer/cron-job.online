@@ -34,7 +34,7 @@ func (app App) getCronJobList(c echo.Context) error {
 		}
 	})()
 	now := time.Now()
-	jobs, err := app.CronJobRepository.FindAllCronJobsBetween(c.Request().Context(), time.Unix(0, 0), now.Add(5*time.Minute))
+	jobs, err := app.CronJobRepository.FindAllCronJobsBetween(c.Request().Context(), time.Unix(0, 0), now.Add(100000*time.Hour))
 	if err != nil {
 		return err
 	}
