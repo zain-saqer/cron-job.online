@@ -20,7 +20,8 @@ import (
 
 var (
 	address         = os.Getenv(`ADDRESS`)
-	env             = os.Getenv(`ENV`)
+	autoTLSAddress  = os.Getenv(`AUTO_TLS`)
+	tlsAddress      = os.Getenv(`TLS_ADDRESS`)
 	mongoHost       = os.Getenv(`MONGO_HOST`)
 	mongoUsername   = os.Getenv(`MONGO_USERNAME`)
 	mongoPassword   = os.Getenv(`MONGO_PASSWORD`)
@@ -64,21 +65,23 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if env == `production` {
+		if autoTLSAddress != `` {
 			// e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("<DOMAIN>")
 			// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
 			e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
-			err := e.StartAutoTLS(address)
+			err := e.StartAutoTLS(tlsAddress)
 			if err != nil && !errors.Is(http.ErrServerClosed, err) {
-				log.Fatal().Err(err).Msg(`shutting down server`)
-			}
-		} else {
-			err := e.Start(address)
-			if err != nil && !errors.Is(http.ErrServerClosed, err) {
-				log.Fatal().Err(err).Msg(`shutting down server`)
+				log.Fatal().Err(err).Msg(`shutting down tls server error`)
 			}
 		}
-
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := e.Start(address)
+		if err != nil && !errors.Is(http.ErrServerClosed, err) {
+			log.Fatal().Err(err).Msg(`shutting down server error`)
+		}
 	}()
 	wg.Add(1)
 	go func() {

@@ -12,6 +12,7 @@
       <env name="MONGO_PASSWORD" value="example" />
       <env name="MONGO_PORT" value="27017" />
       <env name="MONGO_USERNAME" value="root" />
+      <env name="ADDRESS" value=":8080" />
     </envs>
     <kind value="PACKAGE" />
     <package value="github.com/zain-saqer/crone-job/cmd/web" />
