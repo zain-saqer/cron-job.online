@@ -3,7 +3,6 @@ package mongodb
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/zain-saqer/crone-job/internal/cronjob"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -50,7 +49,6 @@ func (r *MongoCronJobRepository) FindCronJobsBetween(ctx context.Context, start,
 			}
 			select {
 			case results <- cronJob:
-				fmt.Println(`case results <- cronJob:`)
 			case <-ctx.Done():
 				return
 			}
