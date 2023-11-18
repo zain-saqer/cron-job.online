@@ -5,7 +5,7 @@ services:
     depends_on:
       - mongo
     ports:
-      - "8080:8080"
+      - "80:80"
       - "443:443"
     volumes:
       - autocert_cache:/var/www/.cache
@@ -22,7 +22,6 @@ services:
       MONGO_COLLECTION: ${MONGO_COLLECTION:?MONGO_COLLECTION is missing}
   mongo:
     image: mongo
-    restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?MONGO_USER is missing}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS:?MONGO_PASS is missing}
