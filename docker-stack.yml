@@ -27,7 +27,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS:?}
     volumes:
-      - /data/db
+      - db-data:/data/db
     ports:
       - "27017:27017"
   mongo-express:
@@ -38,4 +38,6 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_EXPRESS_USER:?}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_EXPRESS_PASS:?}
       ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:?}:${MONGO_PASS:?}@mongo:27017/
-
+volumes:
+  db-data:
+  autocert_cache:
