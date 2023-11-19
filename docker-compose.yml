@@ -13,8 +13,6 @@ services:
       - /var/www/.cache
     environment:
       ADDRESS: ${ADDRESS:?}
-      AUTO_TLS: ${AUTO_TLS}
-      TLS_ADDRESS: ${TLS_ADDRESS:?}
       AUTH_USER: ${AUTH_USER:?}
       AUTH_PASS: ${AUTH_PASS:?}
       MONGO_HOST: mongo
@@ -24,7 +22,7 @@ services:
       MONGO_DATABASE: ${MONGO_DATABASE:?}
       MONGO_COLLECTION: ${MONGO_COLLECTION:?}
   mongo:
-    image: mongo
+    image: mongo:7.0.3
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?}
@@ -34,7 +32,7 @@ services:
     ports:
       - "27017:27017"
   mongo-express:
-    image: mongo-express
+    image: mongo-express:1.0.0-20
     restart: always
     ports:
       - "8081:8081"

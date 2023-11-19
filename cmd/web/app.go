@@ -19,8 +19,6 @@ func (g UUIDGenerator) NewRandom() (uuid.UUID, error) {
 
 type Config struct {
 	Address         string
-	TLSEnabled      bool
-	TLSAddress      string
 	MongoHost       string
 	MongoUsername   string
 	MongoPassword   string

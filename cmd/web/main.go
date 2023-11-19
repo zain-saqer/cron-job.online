@@ -9,7 +9,6 @@ import (
 	"github.com/zain-saqer/crone-job/internal/cronjob"
 	http2 "github.com/zain-saqer/crone-job/internal/http"
 	"github.com/zain-saqer/crone-job/internal/mongodb"
-	"golang.org/x/crypto/acme/autocert"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,11 +18,8 @@ import (
 )
 
 func getConfigs() *Config {
-	_, tlsEnabled := os.LookupEnv(`ENABLE_TLS`)
 	return &Config{
 		Address:         os.Getenv(`ADDRESS`),
-		TLSEnabled:      tlsEnabled,
-		TLSAddress:      os.Getenv(`TLS_ADDRESS`),
 		MongoHost:       os.Getenv(`MONGO_HOST`),
 		MongoUsername:   os.Getenv(`MONGO_USERNAME`),
 		MongoPassword:   os.Getenv(`MONGO_PASSWORD`),
@@ -64,19 +60,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		jobServer.StartPipeline(ctx)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if config.TLSEnabled {
-			// e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("<DOMAIN>")
-			// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
-			e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
-			err := e.StartAutoTLS(config.TLSAddress)
-			if err != nil && !errors.Is(http.ErrServerClosed, err) {
-				log.Fatal().Err(err).Msg(`shutting down tls server error`)
-			}
-		}
 	}()
 	wg.Add(1)
 	go func() {
