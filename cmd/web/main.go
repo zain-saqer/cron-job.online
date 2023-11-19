@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/getsentry/sentry-go"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/zain-saqer/crone-job/internal/cronjob"
@@ -32,7 +33,17 @@ func getConfigs() *Config {
 }
 
 func main() {
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn:              "https://0ab76454d0f30644dbdf0ab898839c41@o4506017577238528.ingest.sentry.io/4506250807476224",
+		TracesSampleRate: 1.0,
+	}); err != nil {
+		log.Fatal().Err(err).Msg("Sentry initialization failed")
+	}
+	defer sentry.Flush(10 * time.Second)
+	defer sentry.Recover()
+
 	config := getConfigs()
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/subtle"
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
@@ -39,4 +40,7 @@ func middlewares(e *echo.Echo, config *Config) {
 	basicAuth(e, config.AuthUser, config.AuthPass)
 	e.Use(middleware.Gzip())
 	requestLogger(e)
+	e.Use(sentryecho.New(sentryecho.Options{
+		Repanic: true,
+	}))
 }
