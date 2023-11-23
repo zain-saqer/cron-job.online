@@ -5,7 +5,7 @@ export $(shell sed 's/=.*//' .env)
 test:
 	env
 build:
-	@docker build -t ${APP_IMAGE} -f ./.docker/app/Dockerfile .
+	@docker build -t ${APP_IMAGE} -f ./docker/app/Dockerfile .
 
 push-image:
 	@docker image push ${APP_IMAGE}
