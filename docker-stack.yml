@@ -5,11 +5,9 @@ services:
     depends_on:
       - mongo
     ports:
-      - "80:80"
-    volumes:
-      - autocert_cache:/var/www/.cache
+      - "${HOST_PORT:?}:${CONTAINER_PORT:?}"
     environment:
-      ADDRESS: ${ADDRESS:?}
+      ADDRESS: ${SERVER_ADDRESS:?}
       AUTH_USER: ${AUTH_USER:?}
       AUTH_PASS: ${AUTH_PASS:?}
       MONGO_HOST: mongo
